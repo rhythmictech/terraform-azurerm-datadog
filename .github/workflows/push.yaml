@@ -17,15 +17,21 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
       - name: Install prerequisites
         run: ./bin/install-ubuntu.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: initialize Terraform
         run: terraform init --backend=false
+      - name: Install pre-commit
+        run: pip install pre-commit
       - name: pre-commit
-        uses: pre-commit/action@v3.0.1
+        # Run pre-commit directly rather than via pre-commit/action, whose
+        # nested actions/cache@v4 is rejected by the org SHA-pin ruleset.
+        run: pre-commit run --all-files --show-diff-on-failure
         env:
           SKIP: >-
             no-commit-to-branch,
@@ -34,13 +40,15 @@ jobs:
   tflint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - name: Install prerequisites
         run: ./bin/install-ubuntu.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Terraform init
         run: terraform init --backend=false
       - name: tflint
-        uses: reviewdog/action-tflint@v1
+        uses: reviewdog/action-tflint@54a5e5aed57dcfbb4662ec548de876df33d6288d # v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           reporter: github-check
@@ -51,9 +59,9 @@ jobs:
   trivy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - name: Trivy config scan (SARIF)
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: config
           hide-progress: false
@@ -64,16 +72,16 @@ jobs:
           severity: CRITICAL,HIGH
           skip-dirs: '**/.terraform'
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@02c5e83432fe5497fd85b873b6c9f16a8578e1d9 # v3
         with:
           sarif_file: trivy-results.sarif
 
   misspell:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - name: misspell
-        uses: reviewdog/action-misspell@v1
+        uses: reviewdog/action-misspell@d6429416b12b09b4e2768307d53bef58d172e962 # v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           locale: US
@@ -84,9 +92,9 @@ jobs:
   yamllint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - name: yamllint
-        uses: reviewdog/action-yamllint@v1
+        uses: reviewdog/action-yamllint@b5f7217d8c815ae374d1d55840d5e569d82f01f0 # v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           reporter: github-check

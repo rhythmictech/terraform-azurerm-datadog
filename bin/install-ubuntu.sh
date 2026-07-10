@@ -6,18 +6,22 @@ sudo apt-get update
 sudo apt-get install -y python3-pip gawk unzip curl
 pip3 install pre-commit
 
-# terraform-docs
+# terraform-docs (pinned; asset OS segment is lowercase 'linux')
+TERRAFORM_DOCS_VERSION="0.24.0"
 mkdir -p tmp
 cd tmp
-curl -Lo ./terraform-docs.tar.gz "https://github.com/terraform-docs/terraform-docs/releases/download/v0.24.0/terraform-docs-v0.24.0-$(uname)-amd64.tar.gz"
+curl -Lo ./terraform-docs.tar.gz "https://github.com/terraform-docs/terraform-docs/releases/download/v${TERRAFORM_DOCS_VERSION}/terraform-docs-v${TERRAFORM_DOCS_VERSION}-linux-amd64.tar.gz"
 tar -xzf terraform-docs.tar.gz
 chmod +x terraform-docs
 sudo mv terraform-docs /usr/bin/
 cd ..
 rm -rf tmp
 
-# tflint
-curl -L "$(curl -sL https://api.github.com/repos/terraform-linters/tflint/releases/latest | grep -o -E "https://.+?_linux_amd64.zip")" > tflint.zip && unzip tflint.zip && rm tflint.zip && sudo mv tflint /usr/bin/
+# tflint (pinned direct download; avoids the unauthenticated GitHub API
+# rate-limits and fragile URL parsing that made CI flaky)
+TFLINT_VERSION="0.61.0"
+curl -Lo tflint.zip "https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_VERSION}/tflint_linux_amd64.zip"
+unzip tflint.zip && rm tflint.zip && sudo mv tflint /usr/bin/
 
 # tfenv
 git clone https://github.com/tfutils/tfenv.git ~/.tfenv || true
