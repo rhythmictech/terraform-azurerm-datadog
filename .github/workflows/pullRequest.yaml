@@ -19,8 +19,12 @@ jobs:
         run: ./bin/install-ubuntu.sh
       - name: initialize Terraform
         run: terraform init --backend=false
+      - name: Install pre-commit
+        run: pip install pre-commit
       - name: pre-commit
-        uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
+        # Run pre-commit directly rather than via pre-commit/action, whose
+        # nested actions/cache@v4 is rejected by the org SHA-pin ruleset.
+        run: pre-commit run --all-files --show-diff-on-failure
         env:
           # covered by the dedicated reviewdog jobs below
           SKIP: >-
