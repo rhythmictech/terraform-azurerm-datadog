@@ -1,0 +1,94 @@
+---
+name: push
+on:
+  push:
+    branches:
+      - main
+      - master
+      - prod
+      - develop
+
+permissions:
+  contents: read
+  checks: write
+  security-events: write
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v6
+      - name: Install prerequisites
+        run: ./bin/install-ubuntu.sh
+      - name: initialize Terraform
+        run: terraform init --backend=false
+      - name: pre-commit
+        uses: pre-commit/action@v3.0.1
+        env:
+          SKIP: >-
+            no-commit-to-branch,
+            terraform_tflint_nocreds
+
+  tflint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install prerequisites
+        run: ./bin/install-ubuntu.sh
+      - name: Terraform init
+        run: terraform init --backend=false
+      - name: tflint
+        uses: reviewdog/action-tflint@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-check
+          filter_mode: nofilter
+          flags: --module
+          level: error
+
+  trivy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Trivy config scan (SARIF)
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          scan-type: config
+          hide-progress: false
+          format: sarif
+          output: trivy-results.sarif
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+          skip-dirs: '**/.terraform'
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+
+  misspell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: misspell
+        uses: reviewdog/action-misspell@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          locale: US
+          reporter: github-check
+          filter_mode: nofilter
+          level: error
+
+  yamllint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: yamllint
+        uses: reviewdog/action-yamllint@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-check
+          filter_mode: nofilter
+          level: error

@@ -1,0 +1,85 @@
+---
+name: pull request
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v6
+      - name: Install prerequisites
+        run: ./bin/install-ubuntu.sh
+      - name: initialize Terraform
+        run: terraform init --backend=false
+      - name: pre-commit
+        uses: pre-commit/action@v3.0.1
+        env:
+          # covered by the dedicated reviewdog jobs below
+          SKIP: >-
+            no-commit-to-branch,
+            terraform_tflint_nocreds
+
+  tflint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install prerequisites
+        run: ./bin/install-ubuntu.sh
+      - name: Terraform init
+        run: terraform init --backend=false
+      - name: tflint
+        uses: reviewdog/action-tflint@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-pr-check
+          filter_mode: added
+          flags: --module
+          level: error
+
+  trivy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Trivy config scan
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          scan-type: config
+          hide-progress: false
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+          skip-dirs: '**/.terraform'
+
+  misspell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: misspell
+        uses: reviewdog/action-misspell@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          locale: US
+          reporter: github-pr-check
+          filter_mode: added
+          level: error
+
+  yamllint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: yamllint
+        uses: reviewdog/action-yamllint@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-pr-check
+          filter_mode: added
+          level: error
