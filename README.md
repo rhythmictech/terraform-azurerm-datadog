@@ -6,9 +6,27 @@ the Datadog service principal, and reusable Datadog-provider objects (the `main`
 logs index and estimated-usage monitors). It is the Azure sibling of
 `terraform-aws-datadog`.
 
-Out of scope (separate modules): the Event Hub + Function **log forwarder** and
-the **Defender for Cloud continuous export**. This module leaves clean extension
-seams for them but does not implement them.
+**Log forwarding** ships as nested submodules under [`modules/`](modules) (see
+the Submodules section below). The **Defender for Cloud continuous export**
+remains out of scope (a separate module); this module leaves a clean extension
+seam for it but does not implement it.
+
+## Submodules
+
+Nested submodules under [`modules/`](modules) extend the core integration with
+Azure diagnostic-log forwarding. Their registry source form is
+`rhythmictech/datadog/azurerm//modules/<name>`.
+
+| Submodule | Purpose |
+| --------- | ------- |
+| [`log-forwarder`](modules/log-forwarder) | Thin wrapper around Datadog's official `forwarder` submodule (Container App job + Storage). Re-exports `storage_account_id` as the destination seam. Deploy one per region. |
+| [`diagnostic-setting`](modules/diagnostic-setting) | Creates one non-clobbering `rhythmic-datadog` diagnostic setting per target resource, shipping to a forwarder's `storage_account_id`. |
+| [`activity-log`](modules/activity-log) | Exports a subscription's (or management group's) Activity Log to a forwarder's storage, plus an optional, default-off tenant directory (sign-in / audit) setting. |
+
+Typical wiring: a `log-forwarder` per region provides `storage_account_id`,
+which the `diagnostic-setting` and `activity-log` submodules consume as their
+destination. A diagnostic setting can only target a storage account in the same
+region, so deploy one forwarder per monitored region.
 
 ## Datadog site (US1)
 

@@ -37,6 +37,39 @@ jobs:
             no-commit-to-branch,
             terraform_tflint_nocreds
 
+  terraform-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+      - name: Install prerequisites
+        run: ./bin/install-ubuntu.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Each submodule is tested as its own step so failures are individually
+      # diagnosable. The pure-azurerm suites and the root suite run first; the
+      # log-forwarder step (which downloads the pinned Datadog child module at
+      # init) runs last so a registry blip cannot mask the other suites.
+      - name: terraform test (modules/diagnostic-setting)
+        run: |
+          terraform -chdir=modules/diagnostic-setting init --backend=false
+          terraform -chdir=modules/diagnostic-setting test
+      - name: terraform test (modules/activity-log)
+        run: |
+          terraform -chdir=modules/activity-log init --backend=false
+          terraform -chdir=modules/activity-log test
+      # Pre-existing root suite, run separately so its status is never conflated
+      # with the submodule tests.
+      - name: terraform test (root module)
+        run: |
+          terraform init --backend=false
+          terraform test
+      - name: terraform test (modules/log-forwarder)
+        run: |
+          terraform -chdir=modules/log-forwarder init --backend=false
+          terraform -chdir=modules/log-forwarder test
+
   tflint:
     runs-on: ubuntu-latest
     steps:
@@ -62,6 +95,11 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - name: Trivy config scan (SARIF)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          # Misconfigurations in downloaded third-party modules (e.g. the Datadog
+          # forwarder) are out of our control; scan first-party config only, as the
+          # pre-commit terraform_trivy hook already does.
+          TRIVY_TF_EXCLUDE_DOWNLOADED_MODULES: "true"
         with:
           scan-type: config
           hide-progress: false

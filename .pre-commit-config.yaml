@@ -18,6 +18,11 @@ repos:
       - id: terraform_trivy
         args:
           - --args=--skip-dirs="**/.terraform,examples/*"
+          # Do not scan vendored/downloaded child modules (e.g. the Datadog
+          # forwarder module the log-forwarder wrapper calls): we do not own
+          # their resource posture. Our own resources are still scanned, and the
+          # dedicated CI trivy job gates CRITICAL/HIGH.
+          - --args=--tf-exclude-downloaded-modules
       - id: terraform_providers_lock
         args:
           - --hook-config=--mode=always-regenerate-lockfile
