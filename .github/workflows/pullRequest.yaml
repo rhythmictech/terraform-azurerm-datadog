@@ -12,15 +12,15 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
       - name: Install prerequisites
         run: ./bin/install-ubuntu.sh
       - name: initialize Terraform
         run: terraform init --backend=false
       - name: pre-commit
-        uses: pre-commit/action@v3.0.1
+        uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
         env:
           # covered by the dedicated reviewdog jobs below
           SKIP: >-
@@ -30,13 +30,13 @@ jobs:
   tflint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - name: Install prerequisites
         run: ./bin/install-ubuntu.sh
       - name: Terraform init
         run: terraform init --backend=false
       - name: tflint
-        uses: reviewdog/action-tflint@v1
+        uses: reviewdog/action-tflint@54a5e5aed57dcfbb4662ec548de876df33d6288d # v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           reporter: github-pr-check
@@ -47,9 +47,9 @@ jobs:
   trivy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - name: Trivy config scan
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: config
           hide-progress: false
@@ -62,9 +62,9 @@ jobs:
   misspell:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - name: misspell
-        uses: reviewdog/action-misspell@v1
+        uses: reviewdog/action-misspell@d6429416b12b09b4e2768307d53bef58d172e962 # v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           locale: US
@@ -75,9 +75,9 @@ jobs:
   yamllint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - name: yamllint
-        uses: reviewdog/action-yamllint@v1
+        uses: reviewdog/action-yamllint@b5f7217d8c815ae374d1d55840d5e569d82f01f0 # v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           reporter: github-pr-check
