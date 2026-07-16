@@ -59,6 +59,10 @@ jobs:
         run: |
           terraform -chdir=modules/activity-log init --backend=false
           terraform -chdir=modules/activity-log test
+      - name: terraform test (modules/defender-export)
+        run: |
+          terraform -chdir=modules/defender-export init --backend=false
+          terraform -chdir=modules/defender-export test
       # Pre-existing root suite, run separately so its status is never conflated
       # with the submodule tests.
       - name: terraform test (root module)

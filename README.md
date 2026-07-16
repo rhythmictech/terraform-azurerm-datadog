@@ -7,9 +7,11 @@ logs index and estimated-usage monitors). It is the Azure sibling of
 `terraform-aws-datadog`.
 
 **Log forwarding** ships as nested submodules under [`modules/`](modules) (see
-the Submodules section below). The **Defender for Cloud continuous export**
-remains out of scope (a separate module); this module leaves a clean extension
-seam for it but does not implement it.
+the Submodules section below). **Defender for Cloud continuous export** now
+ships as the [`defender-export`](modules/defender-export) submodule: it assigns
+the built-in continuous-export policy and bridges Defender findings into Datadog
+over an Event Hub (Defender export cannot target blob storage, so it does not
+ride the blob-fed forwarder seam).
 
 ## Submodules
 
@@ -22,6 +24,7 @@ Azure diagnostic-log forwarding. Their registry source form is
 | [`log-forwarder`](modules/log-forwarder) | Thin wrapper around Datadog's official `forwarder` submodule (Container App job + Storage). Re-exports `storage_account_id` as the destination seam. Deploy one per region. |
 | [`diagnostic-setting`](modules/diagnostic-setting) | Creates one non-clobbering `rhythmic-datadog` diagnostic setting per target resource, shipping to a forwarder's `storage_account_id`. |
 | [`activity-log`](modules/activity-log) | Exports a subscription's (or management group's) Activity Log to a forwarder's storage, plus an optional, default-off tenant directory (sign-in / audit) setting. |
+| [`defender-export`](modules/defender-export) | Assigns the built-in Defender for Cloud continuous-export policy and provisions (or references) the Event Hub it writes to, bridging Defender alerts and recommendations into Datadog's Event Hub log path. |
 
 Typical wiring: a `log-forwarder` per region provides `storage_account_id`,
 which the `diagnostic-setting` and `activity-log` submodules consume as their
