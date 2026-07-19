@@ -427,3 +427,20 @@ variable "renotify_statuses" {
     error_message = "The renotify_statuses must be a list of 'alert', 'no data', or 'warn'."
   }
 }
+
+########################################
+# Health custom pipeline (Azure Service Health / Resource Health)
+########################################
+
+variable "manage_health_pipeline" {
+  default     = false
+  description = <<-END
+    A boolean flag to manage the Datadog custom log pipeline that normalizes
+    forwarded Azure Service Health / Resource Health records. When true, the
+    pipeline remaps the affected service, message, and the health-classification
+    attributes (incidentType, currentHealthStatus, cause) so downstream monitors
+    can filter on stable `@properties.*` facets. Datadog custom pipelines are
+    org-global, so enable this on exactly one instantiation.
+  END
+  type        = bool
+}

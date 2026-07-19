@@ -24,6 +24,12 @@ mock_resource "datadog_logs_index" {
   }
 }
 
+mock_resource "datadog_logs_custom_pipeline" {
+  defaults = {
+    id = "00000000000000000000000000"
+  }
+}
+
 ########################################
 # azuread
 ########################################
