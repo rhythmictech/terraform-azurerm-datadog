@@ -3,7 +3,8 @@
 Core Datadog &harr; Azure integration module: it wires the `datadog_integration_azure`
 object, an optional per-subscription **Monitoring Reader** role assignment for
 the Datadog service principal, and reusable Datadog-provider objects (the `main`
-logs index and estimated-usage monitors). It is the Azure sibling of
+logs index, estimated-usage monitors, and an optional Azure Service Health /
+Resource Health log pipeline). It is the Azure sibling of
 `terraform-aws-datadog`.
 
 **Log forwarding** ships as nested submodules under [`modules/`](modules) (see
@@ -92,6 +93,23 @@ module runs under a lower-privilege identity. Set the flag to `true` only when
 this module should own the assignment (and no matching assignment already
 exists, else an HTTP 409 `RoleAssignmentExists` results).
 
+## Health event pipeline
+
+Setting `manage_health_pipeline = true` creates a Datadog custom log pipeline
+that normalizes forwarded **Azure Service Health** and **Resource Health**
+records (delivered via the Activity Log &rarr; storage &rarr; forwarder seam). It
+remaps the affected service and message and normalizes the health-classification
+attributes so downstream monitors can filter on stable
+`@properties.incidentType`, `@properties.currentHealthStatus`, and
+`@properties.cause` facets. It is the Azure analog of the AWS module's health
+remapper.
+
+Field paths target the **storage-streamed** JSON shape (`records[].properties.*`)
+rather than the portal field names, and each remapper is annotated with a `TODO`
+to confirm the exact path against a real forwarded record. Datadog custom
+pipelines are **org-global**, so enable this flag on exactly one instantiation.
+The flag is off by default.
+
 ## Usage
 
 > **Note:** the registry `source` namespace/name and the `version` pin below are
@@ -165,6 +183,7 @@ No modules.
 | [azurerm_role_assignment.datadog](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
 | [azurerm_role_assignment.datadog_blob](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
 | [datadog_integration_azure.this](https://registry.terraform.io/providers/DataDog/datadog/latest/docs/resources/integration_azure) | resource |
+| [datadog_logs_custom_pipeline.health](https://registry.terraform.io/providers/DataDog/datadog/latest/docs/resources/logs_custom_pipeline) | resource |
 | [datadog_logs_index.main](https://registry.terraform.io/providers/DataDog/datadog/latest/docs/resources/logs_index) | resource |
 | [datadog_monitor.anomaly_usage](https://registry.terraform.io/providers/DataDog/datadog/latest/docs/resources/monitor) | resource |
 | [datadog_monitor.estimated_usage](https://registry.terraform.io/providers/DataDog/datadog/latest/docs/resources/monitor) | resource |
@@ -205,6 +224,7 @@ No modules.
 | <a name="input_logs_main_index_retention_days"></a> [logs\_main\_index\_retention\_days](#input\_logs\_main\_index\_retention\_days) | The number of days to retain logs in the main index (only used if logs\_manage\_main\_index == true). | `number` | `15` | no |
 | <a name="input_logs_manage_main_index"></a> [logs\_manage\_main\_index](#input\_logs\_manage\_main\_index) | A boolean flag to manage the main Datadog logs index. | `bool` | `false` | no |
 | <a name="input_manage_datadog_sp_role_assignment"></a> [manage\_datadog\_sp\_role\_assignment](#input\_manage\_datadog\_sp\_role\_assignment) | `false` (default): the module does NOT assign Monitoring Reader to the Datadog<br/>SP -- assume it is pre-assigned out-of-band during onboarding by a<br/>higher-privilege identity. `true`: the module owns the assignment (the<br/>deploying identity must be allowed to assign roles to an external SP<br/>principal, and no matching assignment may pre-exist -- else HTTP 409). | `bool` | `false` | no |
+| <a name="input_manage_health_pipeline"></a> [manage\_health\_pipeline](#input\_manage\_health\_pipeline) | A boolean flag to manage the Datadog custom log pipeline that normalizes<br/>forwarded Azure Service Health / Resource Health records. When true, the<br/>pipeline remaps the affected service, message, and the health-classification<br/>attributes (incidentType, currentHealthStatus, cause) so downstream monitors<br/>can filter on stable `@properties.*` facets. Datadog custom pipelines are<br/>org-global, so enable this on exactly one instantiation. | `bool` | `false` | no |
 | <a name="input_metrics_enabled"></a> [metrics\_enabled](#input\_metrics\_enabled) | Master Azure metrics collection toggle. Maps to metrics\_enabled. | `bool` | `true` | no |
 | <a name="input_name"></a> [name](#input\_name) | Moniker to apply to the integration and created Azure resources (typically the client name). | `string` | n/a | yes |
 | <a name="input_renotify_interval"></a> [renotify\_interval](#input\_renotify\_interval) | Renotify interval for all usage alerts, in minutes (set to null to disable). | `number` | `30` | no |
