@@ -23,14 +23,23 @@ Azure diagnostic-log forwarding. Their registry source form is
 | Submodule | Purpose |
 | --------- | ------- |
 | [`log-forwarder`](modules/log-forwarder) | Thin wrapper around Datadog's official `forwarder` submodule (Container App job + Storage). Re-exports `storage_account_id` as the destination seam. Deploy one per region. |
-| [`diagnostic-setting`](modules/diagnostic-setting) | Creates one non-clobbering `rhythmic-datadog` diagnostic setting per target resource, shipping to a forwarder's `storage_account_id`. |
+| [`diagnostic-setting`](modules/diagnostic-setting) | Creates one non-clobbering `rhythmic-datadog` diagnostic setting per target resource, shipping to a forwarder's `storage_account_id`. Takes an **explicit** target map; use it for short, hand-picked target lists. |
+| [`diagnostic-setting-discovery`](modules/diagnostic-setting-discovery) | **Discovers** a subscription's log-emitting resources by type and settings all of them, routing each to a co-regional destination. The first-time rollout path, with no hand-maintained target list. Expands storage accounts into their service scopes, and fails the plan on a region with no destination rather than skipping it. |
 | [`activity-log`](modules/activity-log) | Exports a subscription's (or management group's) Activity Log to a forwarder's storage, plus an optional, default-off tenant directory (sign-in / audit) setting. |
 | [`defender-export`](modules/defender-export) | Assigns the built-in Defender for Cloud continuous-export policy and provisions (or references) the Event Hub it writes to, bridging Defender alerts and recommendations into Datadog's Event Hub log path. |
 
-Typical wiring: a `log-forwarder` per region provides `storage_account_id`,
-which the `diagnostic-setting` and `activity-log` submodules consume as their
-destination. A diagnostic setting can only target a storage account in the same
-region, so deploy one forwarder per monitored region.
+Typical wiring: a `log-forwarder` per region provides `storage_account_id`, which
+`diagnostic-setting-discovery` (or `diagnostic-setting`) and `activity-log`
+consume as their destination. A diagnostic setting can only target a storage
+account in the same region, so deploy one forwarder per monitored region.
+
+Choosing between the two diagnostic-setting submodules: reach for
+`diagnostic-setting-discovery` when onboarding a subscription, since it needs only
+a type list and keeps working as resources come and go. Reach for
+`diagnostic-setting` when the targets are a deliberate short list, or when
+different targets need different category selections. They can coexist, as long
+as no scope ends up with a setting from both: two settings on one scope means two
+destinations, so the same records are ingested and billed twice.
 
 ## Datadog site (US1)
 
