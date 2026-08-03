@@ -131,7 +131,7 @@ run "storage_expands_into_service_scopes" {
 }
 
 # Narrowing storage_services narrows the expansion.
-run "storage_services_subset_is_honoured" {
+run "storage_services_subset_is_honored" {
   command = plan
 
   variables {
