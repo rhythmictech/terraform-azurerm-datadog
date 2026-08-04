@@ -22,11 +22,31 @@
 # when trivy-action is bumped; once the pinned version honors inline comments or
 # .trivyignore.yaml, delete this file and rely on the inline ignores.
 #
-# BOTH id forms are listed deliberately. Trivy reports this check as `AZU-0012`
-# in output while the canonical AVD id is `AVD-AZU-0012`, and both forms were
-# verified to work against a freshly-downloaded checks bundle. The push workflow
-# restores a CACHED bundle, and listing both removes id-form drift between bundle
-# versions as a possible cause of the ignore silently not matching there.
+# BOTH id forms are listed deliberately. Trivy reports these checks as `AZU-00NN`
+# in output while the canonical AVD id is `AVD-AZU-00NN`, and both forms were
+# verified to work.
+#
+# WHY MEDIUM AND LOW CHECKS ARE LISTED HERE, even though both trivy jobs declare
+# `severity: CRITICAL,HIGH`:
+#
+#   trivy-action's entrypoint contains this, and it is not obvious from the
+#   workflow:
+#
+#       if [ "${TRIVY_FORMAT:-}" = "sarif" ]; then
+#         if [ "${INPUT_LIMIT_SEVERITIES_FOR_SARIF:-false,,}" != "true" ]; then
+#           unset TRIVY_SEVERITY
+#
+#   So the SARIF-format scan in push.yaml DISCARDS the declared severity filter
+#   and scans ALL severities, then still honors `exit-code: 1`. That job therefore
+#   effectively gates on MEDIUM and LOW too, while the table-format jobs gate only
+#   on CRITICAL and HIGH. The action prints "Building SARIF report with all
+#   severities" when it does this.
+#
+#   Consequence for anyone adding a resource here: a MEDIUM finding will turn
+#   master red even though no workflow appears to ask for MEDIUM. Either accept it
+#   in this file with a justification, or fix it. Setting
+#   `limit-severities-for-sarif: true` on that step would restore the declared
+#   policy, at the cost of the Security tab no longer receiving MEDIUM/LOW.
 
 # Storage account network default action is Allow.
 # The Datadog log-archive account must accept writes from Datadog's archive
@@ -39,3 +59,24 @@
 # is off. See modules/logs-archive/README.md.
 AVD-AZU-0012
 AZU-0012
+
+# Storage account has no Storage Analytics logging enabled.
+# Request-level diagnostics belong on Azure Monitor diagnostic settings, which
+# this repo provisions as a first-class concern, not on legacy Storage Analytics.
+AVD-AZU-0057
+AZU-0057
+
+# Storage account is not geo-redundant.
+# LRS is a deliberate cost default for a multi-year archive;
+# `storage_account_replication_type` exposes GRS/GZRS for callers who want
+# geo-redundancy and will pay for it.
+AVD-AZU-0058
+AZU-0058
+
+# Storage account does not use customer-managed keys.
+# Platform-managed keys. CMK needs a Key Vault, a key, and an identity with
+# wrap/unwrap, which is a caller-level decision rather than something a log-archive
+# module should provision. Infrastructure encryption IS enabled, so data is
+# double-encrypted at rest with platform keys.
+AVD-AZU-0060
+AZU-0060
