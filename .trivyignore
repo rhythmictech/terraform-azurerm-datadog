@@ -21,6 +21,12 @@
 # will be suppressed for it too without anyone being told. Re-check this file
 # when trivy-action is bumped; once the pinned version honors inline comments or
 # .trivyignore.yaml, delete this file and rely on the inline ignores.
+#
+# BOTH id forms are listed deliberately. Trivy reports this check as `AZU-0012`
+# in output while the canonical AVD id is `AVD-AZU-0012`, and both forms were
+# verified to work against a freshly-downloaded checks bundle. The push workflow
+# restores a CACHED bundle, and listing both removes id-form drift between bundle
+# versions as a possible cause of the ignore silently not matching there.
 
 # Storage account network default action is Allow.
 # The Datadog log-archive account must accept writes from Datadog's archive
@@ -32,3 +38,4 @@
 # granted blob write; account keys are disabled by default and public blob access
 # is off. See modules/logs-archive/README.md.
 AVD-AZU-0012
+AZU-0012

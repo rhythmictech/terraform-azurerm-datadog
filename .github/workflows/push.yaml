@@ -105,6 +105,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      # Informational table-format scan, run FIRST so the log always records which
+      # check fired. The SARIF step below is the gate, but on failure it prints
+      # nothing (findings go to the output file) and its upload step is skipped,
+      # so a failure there leaves no record of the finding anywhere: not in the
+      # log, not in the Security tab. exit-code 0 keeps this step purely
+      # diagnostic.
+      - name: Trivy config scan (table, informational)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_TF_EXCLUDE_DOWNLOADED_MODULES: "true"
+        with:
+          scan-type: config
+          hide-progress: false
+          format: table
+          exit-code: '0'
+          severity: CRITICAL,HIGH
+          skip-dirs: '**/.terraform'
       - name: Trivy config scan (SARIF)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         env:
