@@ -96,6 +96,14 @@ jobs:
           filter_mode: added
           flags: --call-module-type=all
           level: error
+          # The action installs its OWN tflint into a temp path with its own
+          # TFLINT_PLUGIN_DIR, so `tflint --init` run by bin/install-ubuntu.sh is
+          # invisible to it and .tflint.hcl's azurerm ruleset is not found.
+          tflint_init: true
+          # Pin to the version bin/install-ubuntu.sh installs. The default is
+          # `latest`, which is how the removal of `--module` in tflint 0.54
+          # silently broke this job.
+          tflint_version: v0.61.0
 
   trivy:
     runs-on: ubuntu-latest
