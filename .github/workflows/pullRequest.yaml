@@ -94,7 +94,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           reporter: github-pr-check
           filter_mode: added
-          flags: --module
+          flags: --call-module-type=all
           level: error
 
   trivy:
