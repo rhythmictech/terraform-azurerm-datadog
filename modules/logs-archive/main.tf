@@ -34,12 +34,10 @@ locals {
 # (avd-azu-0061 is not ignored: infrastructure encryption is free and enabled
 # below. It can only be set at creation.)
 #
-# ORDER MATTERS, do not sort these. CI pins trivy 0.70 (via trivy-action), which
-# honored only the ignore on the line immediately above the flagged resource;
-# with avd-azu-0012 four lines up, the CRITICAL fired in CI while passing under
-# the newer trivy the pre-commit hook uses locally. avd-azu-0012 is the only
-# CRITICAL here and therefore the only one CI's severity filter evaluates, so it
-# is kept adjacent to the resource.
+# These inline ignores are honored by the per-directory pre-commit terraform_trivy
+# hook. avd-azu-0012 additionally needs the repo-root `.trivyignore`, because the
+# trivy version CI pins does not honor the inline form for that check; see that
+# file for the verification and the limitation it carries.
 #trivy:ignore:avd-azu-0057
 #trivy:ignore:avd-azu-0058
 #trivy:ignore:avd-azu-0060
