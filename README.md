@@ -27,6 +27,12 @@ Azure diagnostic-log forwarding. Their registry source form is
 | [`diagnostic-setting-discovery`](modules/diagnostic-setting-discovery) | **Discovers** a subscription's log-emitting resources by type and settings all of them, routing each to a co-regional destination. The first-time rollout path, with no hand-maintained target list. Expands storage accounts into their service scopes, and fails the plan on a region with no destination rather than skipping it. |
 | [`activity-log`](modules/activity-log) | Exports a subscription's (or management group's) Activity Log to a forwarder's storage, plus an optional, default-off tenant directory (sign-in / audit) setting. |
 | [`defender-export`](modules/defender-export) | Assigns the built-in Defender for Cloud continuous-export policy and provisions (or references) the Event Hub it writes to, bridging Defender alerts and recommendations into Datadog's Event Hub log path. |
+| [`logs-archive`](modules/logs-archive) | Long-term log retention: storage account, private container, Hot-then-Cool lifecycle, the blob-writer grant for the integration app registration, and the `datadog_logs_archive` pointing at it. One archive serves every region. Deliberately offers no Cold/Archive tiering and no immutability policy, both of which break Datadog rehydration. |
+
+Note the difference in direction between the forwarder seam and the archive: the
+forwarder submodules push Azure logs **into** Datadog, while `logs-archive`
+configures Datadog to write logs **back out** to blob for retention. The archive
+reads nothing from a forwarder's storage, so the two are independent.
 
 Typical wiring: a `log-forwarder` per region provides `storage_account_id`, which
 `diagnostic-setting-discovery` (or `diagnostic-setting`) and `activity-log`
