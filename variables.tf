@@ -444,3 +444,89 @@ variable "manage_health_pipeline" {
   END
   type        = bool
 }
+
+########################################
+# Subscription-name custom pipeline (subscription id -> display name)
+########################################
+
+variable "manage_subscription_name_pipeline" {
+  default     = false
+  description = <<-END
+    A boolean flag to manage the Datadog custom log pipeline that maps an Azure
+    subscription id onto a human-readable subscription name, so log queries and
+    monitor group-bys can use the name instead of a GUID. Datadog custom pipelines
+    are org-global, so enable this on exactly one instantiation, and give that one
+    instantiation a `subscription_name_map` covering EVERY subscription the org
+    should map rather than one account's.
+  END
+  type        = bool
+}
+
+variable "subscription_name_pipeline_name" {
+  default     = "Azure Subscription Name Mapper"
+  description = "Display name of the subscription-name pipeline in Datadog. Pipelines are org-global, so this must be unique within the org."
+  type        = string
+}
+
+variable "subscription_name_pipeline_filter_query" {
+  default     = "*"
+  description = "Query scoping which logs the subscription-name pipeline processes. `*` evaluates every log reaching the org, which is fine for a single-account org and wasteful (and cross-account) on a shared one; narrow it there."
+  type        = string
+}
+
+variable "subscription_name_map" {
+  default     = {}
+  description = <<-END
+    Map of Azure subscription id to the display name it should resolve to, e.g.
+    `{ "00000000-0000-0000-0000-000000000000" = "example-prod" }`. Rendered into
+    the lookup processor's `key,value` table.
+
+    An `azurerm_subscriptions` data source is a convenient source for this, but
+    note it returns only the subscriptions the CALLING credential can see, which
+    is one tenant. On an org mapping several tenants, build the map explicitly.
+  END
+  type        = map(string)
+
+  validation {
+    condition     = !var.manage_subscription_name_pipeline || length(var.subscription_name_map) > 0
+    error_message = "subscription_name_map must be non-empty when manage_subscription_name_pipeline is true, otherwise the pipeline maps nothing."
+  }
+}
+
+variable "subscription_name_sources" {
+  default     = ["subscriptionId", "records.subscriptionId"]
+  description = <<-END
+    Candidate log attributes holding the subscription id, collapsed into
+    `subscription_name_normalized_attribute` before the lookup. A list because the
+    forwarder may deliver records wrapped in a `records[]` array or unwrapped, the
+    same ambiguity the health pipeline handles.
+
+    UNVERIFIED: these defaults are the likely paths, not confirmed ones. A wrong
+    path produces a pipeline that silently maps nothing, so confirm against a real
+    forwarded record.
+  END
+  type        = list(string)
+
+  validation {
+    condition     = length(var.subscription_name_sources) > 0
+    error_message = "subscription_name_sources must list at least one candidate attribute path."
+  }
+}
+
+variable "subscription_name_normalized_attribute" {
+  default     = "subscription_id"
+  description = "Intermediate attribute the candidate source paths are normalized into, and the attribute the lookup processor reads. Rarely needs changing; exposed so it cannot collide with an existing attribute."
+  type        = string
+}
+
+variable "subscription_name_target_attribute" {
+  default     = "subscription_name"
+  description = "Attribute the resolved subscription name is written to. Matches the `subscription_name` tag the Azure metrics integration uses, so log and metric queries group by the same key."
+  type        = string
+}
+
+variable "subscription_name_default" {
+  default     = null
+  description = "Value written to the target attribute when a subscription id is not in `subscription_name_map`. Leave null to write nothing, which makes an unmapped subscription visible as an absent facet rather than a misleading placeholder."
+  type        = string
+}
