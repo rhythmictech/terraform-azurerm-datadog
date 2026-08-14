@@ -92,7 +92,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Terraform init
         run: terraform init --backend=false
-      - name: tflint
+      # Annotations only; the gate below decides the job result.
+      - name: tflint (annotations)
         uses: reviewdog/action-tflint@54a5e5aed57dcfbb4662ec548de876df33d6288d # v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -108,6 +109,11 @@ jobs:
           # `latest`, which is how the removal of `--module` in tflint 0.54
           # silently broke this job.
           tflint_version: v0.61.0
+      # Same gate as pullRequest.yaml, kept identical on purpose: it is
+      # filter-independent, so master and PRs can no longer disagree about
+      # whether tflint passed. See that file for why `local` and not `all`.
+      - name: tflint (every module, exit-code gate)
+        run: tflint --recursive --call-module-type=local
 
   trivy:
     runs-on: ubuntu-latest

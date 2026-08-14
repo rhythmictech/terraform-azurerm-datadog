@@ -43,6 +43,26 @@ run "direct_key_reads_no_secret" {
   }
 }
 
+# A credential stored with surrounding whitespace (the classic case is a Key
+# Vault secret saved with a trailing newline) is trimmed before it reaches the
+# child module, which hard-validates length == 32. Without trimspace() the value
+# below is 35 characters and the forwarder rejects it.
+run "credential_whitespace_is_trimmed" {
+  command = plan
+
+  variables {
+    name                = "example"
+    region              = "eastus"
+    resource_group_name = "rg-monitoring"
+    datadog_api_key     = "  00000000000000000000000000000000\n"
+  }
+
+  assert {
+    condition     = local.datadog_api_key == "00000000000000000000000000000000"
+    error_message = "surrounding whitespace must be trimmed from the Datadog API key"
+  }
+}
+
 # Both sources set -> the exactly-one-source validation fails.
 run "both_sources_rejected" {
   command = plan

@@ -88,11 +88,21 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Terraform init
         run: terraform init --backend=false
-      - name: tflint
+      # Inline annotations only. This step does not decide the job result:
+      # reviewdog defaults to fail_on_error: false, so the gate below is what
+      # passes or fails the check.
+      - name: tflint (inline annotations)
         uses: reviewdog/action-tflint@54a5e5aed57dcfbb4662ec548de876df33d6288d # v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           reporter: github-pr-check
+          # Deliberately left at `added` so annotations stay on lines this PR
+          # touched. That is only acceptable because of the gate below: `added`
+          # silently DROPS tool-level startup errors, whose pseudo-path
+          # `(application):0` is never part of a diff, so a green reviewdog check
+          # on its own is not evidence that tflint ran at all. It is also why a
+          # PR could stay green while master went red on the same commit, since
+          # push.yaml reports with `nofilter`.
           filter_mode: added
           flags: --call-module-type=all
           level: error
@@ -104,6 +114,21 @@ jobs:
           # `latest`, which is how the removal of `--module` in tflint 0.54
           # silently broke this job.
           tflint_version: v0.61.0
+      # Authoritative gate: tflint's own exit code, unmediated by reviewdog, so
+      # both a finding (exit 2) and a failure to run (exit 1) fail the job.
+      #
+      # --recursive lints EVERY module directory. CI previously linted only the
+      # repo root, so none of the submodules were checked here at all.
+      #
+      # --call-module-type=local rather than `all` keeps this step init-free.
+      # Under `all`, tflint loads called modules, so every directory that
+      # transitively reaches Datadog's remote child module (modules/log-forwarder
+      # and several examples/) fails with "module is not found" unless each one is
+      # terraform-init'ed first. The trade-off: evaluation errors that only appear
+      # when a module is evaluated with all-null inputs are not caught here. See
+      # the static-analysis note in modules/log-forwarder/locals.tf.
+      - name: tflint (every module, exit-code gate)
+        run: tflint --recursive --call-module-type=local
 
   trivy:
     runs-on: ubuntu-latest

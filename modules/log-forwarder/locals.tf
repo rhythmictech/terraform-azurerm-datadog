@@ -24,5 +24,14 @@ locals {
   # trimspace() guards against a Key Vault secret stored with a trailing newline
   # (the child module hard-validates length == 32). On valid input exactly one
   # source is set (enforced by variable validation), so this never trims null.
-  datadog_api_key = trimspace(var.key_vault_id != null ? data.azurerm_key_vault_secret.dd[0].value : var.datadog_api_key)
+  #
+  # The null guard below exists for STATIC ANALYSIS, not for runtime: tflint does
+  # not evaluate variable validation blocks, so it reaches this expression with
+  # both sources null and fails on trimspace(null). That is an evaluation error
+  # rather than a rule violation, so no tflint-ignore annotation can suppress it,
+  # and it aborts linting for this entire module. Splitting the source out and
+  # guarding it keeps the module lintable without changing the result for any
+  # input the validation actually admits.
+  api_key_source  = var.key_vault_id != null ? data.azurerm_key_vault_secret.dd[0].value : var.datadog_api_key
+  datadog_api_key = local.api_key_source == null ? null : trimspace(local.api_key_source)
 }
