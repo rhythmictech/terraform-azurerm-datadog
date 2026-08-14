@@ -1,6 +1,15 @@
 # Local .terraform directories
 **/.terraform/*
 
+# Submodule provider lock files. Only the ROOT module commits a lock; a reusable
+# module must not pin its consumers' provider versions. `terraform test` in a
+# submodule creates one of these as a side effect, and because this file did not
+# previously ignore them, `git add -A` would commit them. They also make
+# terraform-docs document the RESOLVED provider version (e.g. 4.81.0) instead of
+# the declared constraint (~> 4.0), which silently rewrites every submodule
+# README.
+modules/*/.terraform.lock.hcl
+
 # .tfstate files
 *.tfstate
 *.tfstate.*
