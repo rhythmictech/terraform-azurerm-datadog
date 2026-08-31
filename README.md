@@ -83,6 +83,37 @@ module creates the `azuread_application` + `service_principal` +
 write (Application Administrator) and is intended for sandbox / self-service
 tenants only. See [`examples/create-app-registration`](examples/create-app-registration).
 
+## Secretless authentication (recommended)
+
+`secretless_auth_enabled = true` switches the integration to Datadog's
+secretless path: a **federated identity credential** on the app registration
+trusts Datadog's OIDC issuer, Entra issues short-lived tokens per request, and
+**no client secret exists anywhere** (nothing to store, share, or rotate).
+Datadog's onboarding labels this "Secretless Auth (recommended)"; the provider
+field is still marked Preview.
+
+The federated credential's **Issuer and Subject are per-Datadog-org values
+surfaced in the integration's Secretless Auth dialog** and are not exported by
+`datadog_integration_azure`, which shapes the flow on each path:
+
+- **Consume path:** pass `secretless_auth_enabled = true` and omit
+  `datadog_client_secret`. The client adds the federated credential to their
+  own app registration (Certificates & secrets -> Federated credentials, or
+  `az ad app federated-credential create`) using the Issuer/Subject you read
+  from the dialog, with audience `api://AzureADTokenExchange`.
+- **Create path:** two applies. First apply with `secretless_auth_enabled =
+  true` (the module mints **no** app password on this path) and
+  `datadog_federated_credential = null`; the integration exists but does not
+  authenticate yet. Read Issuer/Subject from the dialog, set
+  `datadog_federated_credential = { issuer = "...", subject = "..." }`, and
+  apply again; the module creates the
+  `azuread_application_federated_identity_credential` itself.
+
+An existing client-secret integration can be migrated in place from the
+Datadog UI (no new app registration); Datadog removes the stored secret when
+the migration succeeds. After migrating, set `secretless_auth_enabled = true`
+and null out `datadog_client_secret` so Terraform matches reality.
+
 ## Noise control via tag filters
 
 Azure has no per-namespace / per-service metric toggles (unlike the AWS
@@ -193,6 +224,7 @@ No modules.
 | Name | Type |
 | ---- | ---- |
 | [azuread_application.this](https://registry.terraform.io/providers/hashicorp/azuread/latest/docs/resources/application) | resource |
+| [azuread_application_federated_identity_credential.datadog](https://registry.terraform.io/providers/hashicorp/azuread/latest/docs/resources/application_federated_identity_credential) | resource |
 | [azuread_application_password.this](https://registry.terraform.io/providers/hashicorp/azuread/latest/docs/resources/application_password) | resource |
 | [azuread_service_principal.this](https://registry.terraform.io/providers/hashicorp/azuread/latest/docs/resources/service_principal) | resource |
 | [azurerm_role_assignment.datadog](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
@@ -211,13 +243,14 @@ No modules.
 | Name | Description | Type | Default | Required |
 | ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_app_registration_display_name"></a> [app\_registration\_display\_name](#input\_app\_registration\_display\_name) | Display name used only when create\_app\_registration = true. Default null -> the module computes `Datadog-<name>`. | `string` | `null` | no |
-| <a name="input_app_registration_password_end_date"></a> [app\_registration\_password\_end\_date](#input\_app\_registration\_password\_end\_date) | Optional explicit RFC3339 end date for the created client secret (Azure caps app secrets at 730 days). Only used when create\_app\_registration = true; null lets Azure apply its default window. | `string` | `null` | no |
+| <a name="input_app_registration_password_end_date"></a> [app\_registration\_password\_end\_date](#input\_app\_registration\_password\_end\_date) | Optional explicit RFC3339 end date for the created client secret (Azure caps app secrets at 730 days). Only used when create\_app\_registration = true and secretless\_auth\_enabled = false (the secretless path mints no secret); null lets Azure apply its default window. | `string` | `null` | no |
 | <a name="input_app_service_plan_filters"></a> [app\_service\_plan\_filters](#input\_app\_service\_plan\_filters) | Tag filters for App Service Plans (workloads running on App Service Plans). Rendered comma-joined; null when empty. | `list(string)` | `[]` | no |
 | <a name="input_automute"></a> [automute](#input\_automute) | Auto-mute monitors for scaled-down/deleted Azure VMs. Provider default is false; this module opts to true. | `bool` | `true` | no |
 | <a name="input_container_app_filters"></a> [container\_app\_filters](#input\_container\_app\_filters) | Tag filters for Container Apps. Rendered comma-joined; null when empty. | `list(string)` | `[]` | no |
 | <a name="input_create_app_registration"></a> [create\_app\_registration](#input\_create\_app\_registration) | `false` (default): CONSUME a client-created Datadog app registration via the<br/>`datadog_*` vars below. `true`: this module CREATES the `azuread_application`<br/>+ `service_principal` + `application_password` and requires an<br/>interactive/privileged identity with Microsoft Graph write (Application<br/>Administrator).<br/><br/>Keep `false` on any pipeline whose deploying identity has no Graph access<br/>(`true` would fail at the azuread\_* resources). Sandbox/self-service tenants<br/>only. | `bool` | `false` | no |
 | <a name="input_datadog_client_id"></a> [datadog\_client\_id](#input\_datadog\_client\_id) | Client (application) id of the client-created Datadog app registration. Required when create\_app\_registration = false; must be null when creating. | `string` | `null` | no |
 | <a name="input_datadog_client_secret"></a> [datadog\_client\_secret](#input\_datadog\_client\_secret) | Client secret of the client-created Datadog app registration. Required when create\_app\_registration = false unless secretless\_auth\_enabled = true; must be null when creating. Passed to datadog\_integration\_azure. | `string` | `null` | no |
+| <a name="input_datadog_federated_credential"></a> [datadog\_federated\_credential](#input\_datadog\_federated\_credential) | Issuer and Subject for the secretless federated identity credential,<br/>exactly as surfaced in the Datadog integration's Secretless Auth dialog<br/>(they are per-Datadog-org and not exported by the provider, hence a<br/>two-apply flow: apply the integration first, read the dialog, set this,<br/>apply again). Only valid on the create path with secretless\_auth\_enabled<br/>= true; on the consume path the client adds the credential to their own<br/>app registration. | <pre>object({<br/>    issuer  = string<br/>    subject = string<br/>  })</pre> | `null` | no |
 | <a name="input_datadog_site_name"></a> [datadog\_site\_name](#input\_datadog\_site\_name) | Datadog site (e.g. `datadoghq.com` for US1). NOTE: the `datadog` provider<br/>itself uses `api_url` (not a `site` argument); for US1<br/>`api_url = "https://api.datadoghq.com/"` (the provider default).<br/>Consumers/examples configure `api_url` on the provider block. This variable<br/>is retained for parity and any site-derived logic. | `string` | `"datadoghq.com"` | no |
 | <a name="input_datadog_sp_object_id"></a> [datadog\_sp\_object\_id](#input\_datadog\_sp\_object\_id) | Object id of the Datadog service principal (enterprise app). Used as principal\_id for the Monitoring Reader assignment. Required when create\_app\_registration = false; must be null when creating. | `string` | `null` | no |
 | <a name="input_datadog_tenant_id"></a> [datadog\_tenant\_id](#input\_datadog\_tenant\_id) | Entra tenant id of the client tenant. Required when create\_app\_registration = false; must be null when creating. | `string` | `null` | no |
@@ -248,7 +281,7 @@ No modules.
 | <a name="input_renotify_statuses"></a> [renotify\_statuses](#input\_renotify\_statuses) | Renotify statuses for all usage alerts (not used if renotify\_interval is null). | `list(string)` | <pre>[<br/>  "alert"<br/>]</pre> | no |
 | <a name="input_role_assignment_scopes"></a> [role\_assignment\_scopes](#input\_role\_assignment\_scopes) | Subscription scopes granted to the Datadog SP, e.g.<br/>["/subscriptions/<sub-guid-a>","/subscriptions/<sub-guid-b>"]. Only used<br/>(for\_each'd) when manage\_datadog\_sp\_role\_assignment = true. A management-group<br/>scope (/providers/Microsoft.Management/managementGroups/<id>) also works as a<br/>string; use per-subscription scopes when the tenant has no custom management group. | `list(string)` | n/a | yes |
 | <a name="input_role_definition_name"></a> [role\_definition\_name](#input\_role\_definition\_name) | Built-in role granted to the Datadog SP (least-privilege). Keep `Monitoring Reader`; it already grants the read access Datadog resource-collection needs. Constrained to read-only roles to prevent accidental escalation on a third-party principal. | `string` | `"Monitoring Reader"` | no |
-| <a name="input_secretless_auth_enabled"></a> [secretless\_auth\_enabled](#input\_secretless\_auth\_enabled) | Preview passthrough. When true, Datadog authenticates via Entra<br/>workload-identity federation and `client_secret` is omitted (the native<br/>secretless/OIDC path). Keep false until the provider feature GAs. | `bool` | `false` | no |
+| <a name="input_secretless_auth_enabled"></a> [secretless\_auth\_enabled](#input\_secretless\_auth\_enabled) | When true, Datadog authenticates via Entra workload-identity federation<br/>(a federated identity credential on the app registration trusting<br/>Datadog's OIDC issuer) and no client secret exists anywhere. Datadog's<br/>onboarding labels this path "Secretless Auth (recommended)"; the provider<br/>still marks the field Preview. On the create path this also stops the<br/>module from minting an app password; see datadog\_federated\_credential<br/>for how the trust gets established. | `bool` | `false` | no |
 | <a name="input_subscription_name_default"></a> [subscription\_name\_default](#input\_subscription\_name\_default) | Value written to the target attribute when a subscription id is not in `subscription_name_map`. Leave null to write nothing, which makes an unmapped subscription visible as an absent facet rather than a misleading placeholder. | `string` | `null` | no |
 | <a name="input_subscription_name_map"></a> [subscription\_name\_map](#input\_subscription\_name\_map) | Map of Azure subscription id to the display name it should resolve to, e.g.<br/>`{ "00000000-0000-0000-0000-000000000000" = "example-prod" }`. Rendered into<br/>the lookup processor's `key,value` table.<br/><br/>An `azurerm_subscriptions` data source is a convenient source for this, but<br/>note it returns only the subscriptions the CALLING credential can see, which<br/>is one tenant. On an org mapping several tenants, build the map explicitly. | `map(string)` | `{}` | no |
 | <a name="input_subscription_name_normalized_attribute"></a> [subscription\_name\_normalized\_attribute](#input\_subscription\_name\_normalized\_attribute) | Intermediate attribute the candidate source paths are normalized into, and the attribute the lookup processor reads. Rarely needs changing; exposed so it cannot collide with an existing attribute. | `string` | `"subscription_id"` | no |

@@ -134,7 +134,7 @@ variable "app_registration_display_name" {
 
 variable "app_registration_password_end_date" {
   default     = null
-  description = "Optional explicit RFC3339 end date for the created client secret (Azure caps app secrets at 730 days). Only used when create_app_registration = true; null lets Azure apply its default window."
+  description = "Optional explicit RFC3339 end date for the created client secret (Azure caps app secrets at 730 days). Only used when create_app_registration = true and secretless_auth_enabled = false (the secretless path mints no secret); null lets Azure apply its default window."
   type        = string
 }
 
@@ -250,11 +250,37 @@ variable "metrics_enabled" {
 variable "secretless_auth_enabled" {
   default     = false
   description = <<-END
-    Preview passthrough. When true, Datadog authenticates via Entra
-    workload-identity federation and `client_secret` is omitted (the native
-    secretless/OIDC path). Keep false until the provider feature GAs.
+    When true, Datadog authenticates via Entra workload-identity federation
+    (a federated identity credential on the app registration trusting
+    Datadog's OIDC issuer) and no client secret exists anywhere. Datadog's
+    onboarding labels this path "Secretless Auth (recommended)"; the provider
+    still marks the field Preview. On the create path this also stops the
+    module from minting an app password; see datadog_federated_credential
+    for how the trust gets established.
   END
   type        = bool
+}
+
+variable "datadog_federated_credential" {
+  default     = null
+  description = <<-END
+    Issuer and Subject for the secretless federated identity credential,
+    exactly as surfaced in the Datadog integration's Secretless Auth dialog
+    (they are per-Datadog-org and not exported by the provider, hence a
+    two-apply flow: apply the integration first, read the dialog, set this,
+    apply again). Only valid on the create path with secretless_auth_enabled
+    = true; on the consume path the client adds the credential to their own
+    app registration.
+  END
+  type = object({
+    issuer  = string
+    subject = string
+  })
+
+  validation {
+    condition     = var.datadog_federated_credential == null || (var.create_app_registration && var.secretless_auth_enabled)
+    error_message = "datadog_federated_credential requires create_app_registration = true and secretless_auth_enabled = true; on the consume path the client adds the federated credential themselves."
+  }
 }
 
 ########################################
