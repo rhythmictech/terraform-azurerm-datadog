@@ -48,6 +48,12 @@
 #   `limit-severities-for-sarif: true` on that step would restore the declared
 #   policy, at the cost of the Security tab no longer receiving MEDIUM/LOW.
 
+# SECOND STORAGE ACCOUNT, deliberately covered: modules/eventhub-forwarder creates
+# the backing storage for a consumption Function App, which reaches its content
+# share over the public endpoint and is not an Azure trusted service, so the same
+# AVD-AZU-0012 finding is accepted there for the same reason (see that module's
+# main.tf). It carries inline ignores too; this repo-wide entry is what CI honors.
+
 # Storage account network default action is Allow.
 # The Datadog log-archive account must accept writes from Datadog's archive
 # writer, which reaches it over the public internet and is not an Azure trusted
