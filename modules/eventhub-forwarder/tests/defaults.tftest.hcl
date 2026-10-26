@@ -14,10 +14,10 @@ variables {
 run "defaults_deploy_the_pinned_forwarder" {
   command = plan
 
-  # Node 20 on Functions v4 is what the vendored package targets.
+  # The vendored package needs Node >= 20; 22 is the oldest maintained LTS.
   assert {
-    condition     = azurerm_linux_function_app.this.site_config[0].application_stack[0].node_version == "20"
-    error_message = "the forwarder must run on Node 20"
+    condition     = azurerm_linux_function_app.this.site_config[0].application_stack[0].node_version == "22"
+    error_message = "the forwarder must run on Node 22"
   }
 
   assert {
