@@ -16,19 +16,22 @@ write to blob.
 - A hardened Standard LRS storage account for the Function runtime.
 - A Linux consumption (Y1) App Service plan.
 - A Linux Function App (Node 22, Functions v4, HTTPS only) running Datadog's
-  forwarder, deployed with `zip_deploy_file` from `function/deploy.zip` and set
+  forwarder, deployed with `zip_deploy_file` from `function/deploy-<sha256 prefix>.zip` and set
   to run from the package. The Function registers its own Event Hub trigger in
   code: hub `EVENTHUB_NAME`, consumer group `$Default`, connection from the
   `EVENTHUB_CONNECTION_STRING` app setting.
 
 ## The pinned package
 
-`function/deploy.zip` is Datadog's `azure/activity_logs_monitoring` forwarder at a
+`function/deploy-<sha256 prefix>.zip` is Datadog's `azure/activity_logs_monitoring` forwarder at a
 fixed upstream commit, vendored verbatim; see [`function/PIN.md`](function/PIN.md)
 for the commit, the forwarder's own `VERSION`, the sha256 and the refresh
 procedure. The Function App carries a `precondition` comparing the file on disk to
 that sha256, so a swapped or corrupted package fails the plan rather than being
-deployed. Refresh the pin deliberately; never point the module at `master`.
+deployed. The file name carries the first 8 characters of the sha256 because the
+provider republishes the package only when the `zip_deploy_file` path changes;
+a fixed name would leave an existing Function App on the old package after a
+refresh. Refresh the pin deliberately; never point the module at `master`.
 
 ## Inputs that matter
 

@@ -1,6 +1,6 @@
 # Vendored forwarder package
 
-`deploy.zip` is Datadog's Azure Event Hub log forwarder, vendored verbatim so the
+`deploy-<sha256 prefix>.zip` is Datadog's Azure Event Hub log forwarder, vendored verbatim so the
 module deploys a known artifact rather than whatever `master` holds on apply day.
 
 | Field | Value |
@@ -17,6 +17,12 @@ The module's Function App carries a `precondition` comparing the file on disk to
 the sha256 above, so a swapped or corrupted package fails the plan instead of
 being deployed.
 
+The file name carries the first 8 characters of the sha256, and `main.tf`
+derives the path from `local.package_sha256`. This is load-bearing: the azurerm
+provider republishes the package only when the `zip_deploy_file` path changes,
+not when the file's contents change, so a fixed name would leave an existing
+Function App running the previous package after a refresh.
+
 ## Refreshing the pin
 
 1. Pick the upstream commit deliberately (read its diff; the forwarder's
@@ -26,13 +32,17 @@ being deployed.
 2. Fetch the package at that commit:
 
    ```bash
-   curl -fL -o function/deploy.zip \
+   curl -fL -o /tmp/deploy.zip \
      https://raw.githubusercontent.com/DataDog/datadog-serverless-functions/<commit>/azure/activity_logs_monitoring/deploy.zip
-   shasum -a 256 function/deploy.zip
-   unzip -p function/deploy.zip index.js | grep "const VERSION"
+   shasum -a 256 /tmp/deploy.zip
+   unzip -p /tmp/deploy.zip index.js | grep "const VERSION"
    ```
 
-3. Update `local.package_sha256` and `local.package_source` in `main.tf`, and
-   this table.
-4. Run the module tests, then apply; `zip_deploy_file` redeploys the Function
-   when the package changes.
+3. Replace the vendored file with one named after the new hash:
+   `git rm function/deploy-*.zip`, then move the download to
+   `function/deploy-<first 8 of the new sha256>.zip`.
+4. Update `local.package_sha256` and `local.package_source` in `main.tf`, the
+   hash in `tests/guards.tftest.hcl`, and this table.
+5. Run the module tests. On apply, the plan for an existing Function App must
+   show `zip_deploy_file` changing; if it does not, the package will not be
+   republished.
