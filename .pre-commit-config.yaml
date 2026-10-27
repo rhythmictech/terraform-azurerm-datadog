@@ -33,7 +33,7 @@ repos:
     rev: v6.0.0
     hooks:
       - id: check-added-large-files
-        # modules/eventhub-forwarder/function/deploy.zip is Datadog's forwarder package,
+        # modules/eventhub-forwarder/function/deploy-*.zip is Datadog's forwarder package,
         # vendored verbatim and hash-pinned (about 750 KB). Anything larger is still a mistake.
         args:
           - --maxkb=1024

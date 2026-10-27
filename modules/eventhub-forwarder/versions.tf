@@ -5,7 +5,7 @@ terraform {
 
   required_providers {
     # azurerm for everything this module creates. The forwarder code is a
-    # vendored, pinned zip (function/deploy.zip), so no archive provider is
+    # vendored, pinned zip (function/deploy-<sha256 prefix>.zip), so no archive provider is
     # needed, and the Function talks to Datadog's HTTP intake at runtime, so no
     # datadog provider is needed either.
     azurerm = {

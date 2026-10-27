@@ -37,9 +37,11 @@ run "defaults_deploy_the_pinned_forwarder" {
   }
 
   # The package deployed is the vendored one, and it runs from the package.
+  # The provider republishes only when the zip_deploy_file PATH changes, so the
+  # file name carries the pinned hash: a pin refresh is a path change.
   assert {
-    condition     = endswith(azurerm_linux_function_app.this.zip_deploy_file, "/function/deploy.zip")
-    error_message = "zip_deploy_file must point at the vendored function/deploy.zip"
+    condition     = endswith(azurerm_linux_function_app.this.zip_deploy_file, "/function/deploy-${substr(output.package_sha256, 0, 8)}.zip")
+    error_message = "zip_deploy_file must be function/deploy-<first 8 of the pinned sha256>.zip so a pin refresh redeploys"
   }
 
   assert {
