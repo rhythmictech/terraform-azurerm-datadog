@@ -16,8 +16,8 @@ locals {
   # Function App below refuses to plan if the file on disk does not match this
   # hash, so a silently swapped or corrupted package cannot be deployed.
   package_path   = "${path.module}/function/deploy.zip"
-  package_sha256 = "65699f41c64d507af88d8256d8638491eddc9b4195218926e18a825767a6c64c"
-  package_source = "DataDog/datadog-serverless-functions@8e5e22ac6d88f7f0b3204965ad8d7a080a8b50c1 azure/activity_logs_monitoring (index.js VERSION 2.2.0)"
+  package_sha256 = "61c29b66398e549429e289e943a148b98194131b3e7e22d0b7d658bca709ef51"
+  package_source = "DataDog/datadog-serverless-functions@8da5d723783280362f1468c39d6c990d27282b31 azure/activity_logs_monitoring (index.js VERSION 2.2.0)"
 
   # The Function's environment contract, from the upstream index.js. Optional
   # overrides are merged in only when set so the upstream defaults apply.
@@ -103,7 +103,7 @@ resource "azurerm_linux_function_app" "this" {
 
   site_config {
     application_stack {
-      node_version = "20"
+      node_version = "22"
     }
   }
 

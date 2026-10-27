@@ -7,11 +7,11 @@ module deploys a known artifact rather than whatever `master` holds on apply day
 |---|---|
 | Upstream repository | `DataDog/datadog-serverless-functions` |
 | Path | `azure/activity_logs_monitoring/deploy.zip` |
-| Commit | `8e5e22ac6d88f7f0b3204965ad8d7a080a8b50c1` (2025-11-07, "update event hub forwarder and template (#1024)") |
+| Commit | `8da5d723783280362f1468c39d6c990d27282b31` (2026-10-14, "Remove local.settings.json from activity logs deploy.zip (#1226)") |
 | Forwarder `VERSION` constant in `index.js` | `2.2.0` |
 | `package.json` version | `2.1.1` |
-| sha256 | `65699f41c64d507af88d8256d8638491eddc9b4195218926e18a825767a6c64c` |
-| Runtime | Node 20, Azure Functions v4, extension bundle `[4.*, 5.0.0)` |
+| sha256 | `61c29b66398e549429e289e943a148b98194131b3e7e22d0b7d658bca709ef51` |
+| Runtime | Node 22 (the package requires Node >= 20), Azure Functions v4, extension bundle `[4.*, 5.0.0)` |
 
 The module's Function App carries a `precondition` comparing the file on disk to
 the sha256 above, so a swapped or corrupted package fails the plan instead of

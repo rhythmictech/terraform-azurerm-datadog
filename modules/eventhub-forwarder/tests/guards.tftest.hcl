@@ -55,7 +55,7 @@ run "pinned_package_matches_its_hash" {
   command = plan
 
   assert {
-    condition     = filesha256("${path.module}/function/deploy.zip") == "65699f41c64d507af88d8256d8638491eddc9b4195218926e18a825767a6c64c"
+    condition     = filesha256("${path.module}/function/deploy.zip") == "61c29b66398e549429e289e943a148b98194131b3e7e22d0b7d658bca709ef51"
     error_message = "the vendored deploy.zip must match the pinned sha256 recorded in main.tf and function/PIN.md"
   }
 }

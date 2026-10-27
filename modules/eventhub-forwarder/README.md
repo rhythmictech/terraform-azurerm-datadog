@@ -15,7 +15,7 @@ write to blob.
 
 - A hardened Standard LRS storage account for the Function runtime.
 - A Linux consumption (Y1) App Service plan.
-- A Linux Function App (Node 20, Functions v4, HTTPS only) running Datadog's
+- A Linux Function App (Node 22, Functions v4, HTTPS only) running Datadog's
   forwarder, deployed with `zip_deploy_file` from `function/deploy.zip` and set
   to run from the package. The Function registers its own Event Hub trigger in
   code: hub `EVENTHUB_NAME`, consumer group `$Default`, connection from the
